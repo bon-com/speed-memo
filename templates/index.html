@@ -459,27 +459,31 @@
     document.getElementById('btn-copy').addEventListener('click', async function () {
       const text = memo.value;
       let success = false;
-      if (navigator.clipboard && navigator.clipboard.writeText) {
+
+      // Modern Clipboard API（HTTPS + ユーザー操作コンテキストで動作）
+      if (navigator.clipboard && window.isSecureContext) {
         try {
           await navigator.clipboard.writeText(text);
           success = true;
-        } catch { /* fallthrough */ }
+        } catch { /* フォールバックへ */ }
       }
+
       if (!success) {
-        // iOS Safari対応フォールバック（contentEditableが必須）
-        const wasReadonly = memo.hasAttribute('readonly');
-        memo.removeAttribute('readonly');
-        memo.contentEditable = 'true';
-        memo.focus();
-        memo.select();
-        memo.setSelectionRange(0, 999999);
+        // iOS Safari向けフォールバック：新規textarea要素をオフスクリーンに生成して選択・コピー
+        // ※既存要素の再利用・contentEditable設定はiOS Safariで機能しないため新規生成が必須
+        const el = document.createElement('textarea');
+        el.value = text;
+        el.setAttribute('readonly', '');
+        el.style.cssText = 'position:fixed;top:-9999px;left:-9999px;font-size:16px;opacity:0';
+        document.body.appendChild(el);
+        el.focus();
+        el.setSelectionRange(0, text.length);
         try {
-          document.execCommand('copy');
-          success = true;
+          success = document.execCommand('copy');
         } catch { /* ignore */ }
-        memo.contentEditable = 'false';
-        if (wasReadonly) memo.setAttribute('readonly', '');
+        document.body.removeChild(el);
       }
+
       this.textContent = success ? '✅ コピー済' : '⚠️ コピー失敗';
       setTimeout(() => { this.textContent = '📋 コピー'; }, 2000);
     });
