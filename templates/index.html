@@ -267,16 +267,12 @@
         order: -1;
       }
 
-      .stat-card {
-        flex: 1;
-        padding: 8px 4px;
-      }
+      /* モバイルはタイマーのみ表示 */
+      .sidebar .stat-card:not(#timer-card) { display: none; }
 
-      .stat-value { font-size: 22px; }
+      #timer-card { padding: 10px 16px; }
 
-      #lines-display,
-      #today-display,
-      #today-input { font-size: 22px; }
+      #timer-display { font-size: 32px; }
     }
   </style>
 </head>
@@ -462,15 +458,26 @@
     // --- コピーボタン ---
     document.getElementById('btn-copy').addEventListener('click', async function () {
       const text = memo.value;
-      try {
-        await navigator.clipboard.writeText(text);
-      } catch {
-        memo.removeAttribute('readonly');
-        memo.select();
-        document.execCommand('copy');
-        if (timerState === 'done') memo.setAttribute('readonly', '');
+      let success = false;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(text);
+          success = true;
+        } catch { /* fallthrough */ }
       }
-      this.textContent = '✅ コピー済';
+      if (!success) {
+        // iOS対応フォールバック
+        const wasReadonly = memo.hasAttribute('readonly');
+        memo.removeAttribute('readonly');
+        memo.setSelectionRange(0, memo.value.length);
+        memo.focus();
+        try {
+          document.execCommand('copy');
+          success = true;
+        } catch { /* ignore */ }
+        if (wasReadonly) memo.setAttribute('readonly', '');
+      }
+      this.textContent = success ? '✅ コピー済' : '⚠️ コピー失敗';
       setTimeout(() => { this.textContent = '📋 コピー'; }, 2000);
     });
 
