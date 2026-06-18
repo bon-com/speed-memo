@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SpeedNote</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1a1a2e;
+      color: #eee;
+      font-family: 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+      zoom: 1.25;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    header h1 {
+      font-size: 18px;
+      font-weight: bold;
+      color: #a0a0c0;
+      letter-spacing: 4px;
+    }
+
+    .main {
+      display: flex;
+      gap: 14px;
+    }
+
+    .input-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 13px;
+      color: #888;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    #line-hint {
+      color: #4ec9b0;
+      margin-left: 8px;
+    }
+
+    #title {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid #4ec9b0;
+      padding: 6px 4px;
+      color: #fff;
+      font-size: 17px;
+      outline: none;
+      font-family: inherit;
+    }
+
+    #title::placeholder { color: #444; }
+
+    #memo {
+      width: 100%;
+      background: #0f0f1f;
+      border: 1px solid #2a2a4a;
+      border-radius: 6px;
+      padding: 10px 12px;
+      color: #d4d4d4;
+      font-size: 16px;
+      line-height: 1.9;
+      resize: none;
+      min-height: 160px;
+      overflow-y: hidden;
+      outline: none;
+      font-family: inherit;
+    }
+
+    #memo:focus { border-color: #3a3a6a; }
+    #memo[readonly] { color: #666; cursor: default; }
+
+    .buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .buttons button {
+      flex: 1;
+      border: none;
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 16px;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      font-family: inherit;
+      transition: opacity 0.15s;
+    }
+
+    .buttons button:hover { opacity: 0.85; }
+
+    #btn-copy {
+      background: #4ec9b0;
+      color: #0f0f1f;
+      font-weight: bold;
+    }
+
+    #btn-clear {
+      background: #1e1e3a;
+      border: 1px solid #3a3a5a;
+      color: #888;
+    }
+
+    .sidebar {
+      width: 120px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .stat-card {
+      background: #0f0f1f;
+      border: 1px solid #2a2a4a;
+      border-radius: 10px;
+      padding: 12px 8px;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #888;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 30px;
+      font-weight: bold;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 1px;
+    }
+
+    .stat-sub {
+      font-size: 11px;
+      color: #555;
+      margin-top: 4px;
+    }
+
+    #timer-display { color: #4ec9b0; }
+    #lines-display { color: #dcdcaa; font-size: 28px; }
+    #today-display { color: #c586c0; font-size: 28px; cursor: pointer; }
+    #today-display:hover { opacity: 0.75; }
+
+    #today-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid #c586c0;
+      color: #c586c0;
+      font-size: 28px;
+      font-weight: bold;
+      font-variant-numeric: tabular-nums;
+      text-align: center;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: #1e1e3a;
+      border-radius: 2px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 100%;
+      background: #4ec9b0;
+      border-radius: 2px;
+      transition: width 1s linear;
+    }
+
+    #timer-card.urgent {
+      border-color: #e94560;
+      background: #2a0a0a;
+    }
+
+    #timer-card.urgent #timer-display { color: #e94560; }
+    #timer-card.urgent .progress-fill { background: #e94560; }
+    #timer-card.urgent .stat-label { color: #e94560; }
+
+
+    #dialog-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    #dialog-overlay.hidden { display: none; }
+
+    .dialog {
+      background: #1e1e3a;
+      border: 1px solid #4ec9b0;
+      border-radius: 12px;
+      padding: 28px 32px;
+      text-align: center;
+      min-width: 200px;
+    }
+
+    .dialog-icon { font-size: 28px; margin-bottom: 8px; }
+
+    .dialog-title {
+      font-weight: bold;
+      color: #4ec9b0;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+
+    .dialog-sub {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 18px;
+    }
+
+    #btn-ok {
+      background: #4ec9b0;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 28px;
+      color: #0f0f1f;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    #btn-ok:hover { opacity: 0.85; }
+
+    @media (max-width: 600px) {
+      body { padding: 12px; }
+
+      .container { zoom: 1; }
+
+      .main { flex-direction: column; }
+
+      .sidebar {
+        width: 100%;
+        flex-direction: row;
+        order: -1;
+      }
+
+      .stat-card {
+        flex: 1;
+        padding: 8px 4px;
+      }
+
+      .stat-value { font-size: 22px; }
+
+      #lines-display,
+      #today-display,
+      #today-input { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>SPEED NOTE</h1>
+    </header>
+
+    <div class="main">
+      <div class="input-area">
+        <div class="field">
+          <label for="title">TITLE</label>
+          <input type="text" id="title" placeholder="テーマを入力してください">
+        </div>
+
+        <div class="field">
+          <label for="memo">MEMO <span id="line-hint">0行 / 目安4〜6行</span></label>
+          <textarea id="memo" placeholder="ここに考えを書く"></textarea>
+        </div>
+
+        <div class="buttons">
+          <button id="btn-copy">📋 コピー</button>
+          <button id="btn-clear">🗑 クリア</button>
+        </div>
+      </div>
+
+      <div class="sidebar">
+        <div class="stat-card" id="timer-card">
+          <div class="stat-label">TIME</div>
+          <div class="stat-value" id="timer-display">01:00</div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+          <div class="stat-sub">残り時間</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">LINES</div>
+          <div class="stat-value" id="lines-display">0</div>
+          <div class="stat-sub">目安 4〜6</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">TODAY</div>
+          <div class="stat-value" id="today-display" title="クリックで編集">0</div>
+          <input type="number" id="today-input" min="0" style="display:none">
+          <div class="stat-sub">枚目</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="dialog-overlay" class="hidden">
+    <div class="dialog">
+      <div class="dialog-icon">⏱</div>
+      <div class="dialog-title">1分経過しました</div>
+      <div class="dialog-sub">メモが完成したよ！</div>
+      <button id="btn-ok">OK</button>
+    </div>
+  </div>
+
+  <script>
+    const INDENT = '　'; // 全角スペース（・の幅に合わせるインデント）
+
+    const memo = document.getElementById('memo');
+
+    memo.value = '・';
+    memo.selectionStart = memo.selectionEnd = 1;
+    autoResize();
+
+    // --- タイマー状態 ---
+    let timerState = 'idle'; // 'idle' | 'running' | 'done'
+    let timerInterval = null;
+    let remainingSeconds = 60;
+    let timerExpired = false;
+
+    // --- テキストエリア自動拡張 ---
+    function autoResize() {
+      memo.style.height = 'auto';
+      memo.style.height = memo.scrollHeight + 'px';
+    }
+
+    // --- 箇条書きキーボード処理 ---
+    function onMemoChange() {
+      updateLines();
+      startTimer();
+      autoResize();
+    }
+
+    memo.addEventListener('input', onMemoChange);
+
+    memo.addEventListener('keydown', function (e) {
+      if (memo.hasAttribute('readonly')) return;
+
+      const val = this.value;
+      const pos = this.selectionStart;
+
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const lineStart = val.lastIndexOf('\n', pos - 1) + 1;
+        const currentLine = val.substring(lineStart, pos);
+        if (currentLine === '・') return;
+        const newVal = val.substring(0, pos) + '\n\n・' + val.substring(this.selectionEnd);
+        this.value = newVal;
+        this.selectionStart = this.selectionEnd = pos + 3;
+        onMemoChange();
+        return;
+      }
+
+      if (e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault();
+        const newVal = val.substring(0, pos) + '\n' + INDENT + val.substring(this.selectionEnd);
+        this.value = newVal;
+        this.selectionStart = this.selectionEnd = pos + 1 + INDENT.length;
+        onMemoChange();
+        return;
+      }
+
+      if (e.key === 'Backspace') {
+        const lineStart = val.lastIndexOf('\n', pos - 1) + 1;
+        const currentLine = val.substring(lineStart, pos);
+        if ((currentLine === '・' || currentLine === INDENT) && lineStart > 0) {
+          e.preventDefault();
+          const newVal = val.substring(0, lineStart - 1) + val.substring(pos);
+          this.value = newVal;
+          this.selectionStart = this.selectionEnd = lineStart - 1;
+          onMemoChange();
+        }
+      }
+    });
+
+    function updateLines() {
+      const lines = memo.value.split('\n').filter(l => l.trim() !== '');
+      document.getElementById('lines-display').textContent = lines.length;
+    }
+
+    // --- タイマー ---
+    function startTimer() {
+      if (timerState !== 'idle') return;
+      timerState = 'running';
+      timerInterval = setInterval(tick, 1000);
+    }
+
+    function tick() {
+      remainingSeconds--;
+      updateTimerDisplay();
+
+      if (remainingSeconds <= 15) {
+        document.getElementById('timer-card').classList.add('urgent');
+      }
+
+      if (remainingSeconds <= 0) {
+        clearInterval(timerInterval);
+        timerState = 'done';
+        timerExpired = true;
+        lockMemo();
+        showDialog();
+      }
+    }
+
+    function updateTimerDisplay() {
+      const mins = Math.floor(remainingSeconds / 60).toString().padStart(2, '0');
+      const secs = (remainingSeconds % 60).toString().padStart(2, '0');
+      document.getElementById('timer-display').textContent = `${mins}:${secs}`;
+      const pct = (remainingSeconds / 60) * 100;
+      document.getElementById('progress-fill').style.width = `${pct}%`;
+    }
+
+    function lockMemo() {
+      memo.setAttribute('readonly', '');
+    }
+
+    function showDialog() {
+      document.getElementById('dialog-overlay').classList.remove('hidden');
+    }
+
+    // --- ダイアログ OK ボタン ---
+    document.getElementById('btn-ok').addEventListener('click', function () {
+      document.getElementById('dialog-overlay').classList.add('hidden');
+    });
+
+    // --- コピーボタン ---
+    document.getElementById('btn-copy').addEventListener('click', async function () {
+      const text = memo.value;
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        memo.removeAttribute('readonly');
+        memo.select();
+        document.execCommand('copy');
+        if (timerState === 'done') memo.setAttribute('readonly', '');
+      }
+      this.textContent = '✅ コピー済';
+      setTimeout(() => { this.textContent = '📋 コピー'; }, 2000);
+    });
+
+    // --- クリアボタン ---
+    document.getElementById('btn-clear').addEventListener('click', async function () {
+      if (timerExpired) {
+        try {
+          await fetch('/api/count/increment', { method: 'POST' });
+          const res = await fetch('/api/count');
+          const data = await res.json();
+          document.getElementById('today-display').textContent = data.count;
+        } catch {
+          // 通信失敗時はカウント更新をスキップ
+        }
+      }
+      resetAll();
+    });
+
+    function resetAll() {
+      document.getElementById('title').value = '';
+      memo.value = '・';
+      memo.removeAttribute('readonly');
+      memo.selectionStart = memo.selectionEnd = 1;
+      memo.focus();
+
+      clearInterval(timerInterval);
+      timerInterval = null;
+      remainingSeconds = 60;
+      timerState = 'idle';
+      timerExpired = false;
+
+      document.getElementById('timer-card').classList.remove('urgent');
+      updateTimerDisplay();
+      updateLines();
+      autoResize();
+    }
+
+    // --- TODAY 枚数インライン編集 ---
+    const todayDisplay = document.getElementById('today-display');
+    const todayInput = document.getElementById('today-input');
+
+    todayDisplay.addEventListener('click', function () {
+      todayInput.value = todayDisplay.textContent;
+      todayDisplay.style.display = 'none';
+      todayInput.style.display = 'block';
+      todayInput.focus();
+      todayInput.select();
+    });
+
+    async function commitTodayEdit() {
+      const val = parseInt(todayInput.value, 10);
+      if (!isNaN(val) && val >= 0) {
+        try {
+          await fetch('/api/count/set', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ count: val }),
+          });
+          todayDisplay.textContent = val;
+        } catch {
+          // 通信失敗時は元の値のまま
+        }
+      }
+      todayInput.style.display = 'none';
+      todayDisplay.style.display = '';
+    }
+
+    todayInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') commitTodayEdit();
+      if (e.key === 'Escape') {
+        todayInput.style.display = 'none';
+        todayDisplay.style.display = '';
+      }
+    });
+
+    todayInput.addEventListener('blur', commitTodayEdit);
+
+    // --- ページロード時に TODAY カウントを取得 ---
+    (async function loadTodayCount() {
+      try {
+        const res = await fetch('/api/count');
+        const data = await res.json();
+        document.getElementById('today-display').textContent = data.count;
+      } catch {
+        // 取得失敗時は 0 のまま
+      }
+    })();
+  </script>
+</body>
+</html>
