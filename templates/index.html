@@ -466,15 +466,18 @@
         } catch { /* fallthrough */ }
       }
       if (!success) {
-        // iOS対応フォールバック
+        // iOS Safari対応フォールバック（contentEditableが必須）
         const wasReadonly = memo.hasAttribute('readonly');
         memo.removeAttribute('readonly');
-        memo.setSelectionRange(0, memo.value.length);
+        memo.contentEditable = 'true';
         memo.focus();
+        memo.select();
+        memo.setSelectionRange(0, 999999);
         try {
           document.execCommand('copy');
           success = true;
         } catch { /* ignore */ }
+        memo.contentEditable = 'false';
         if (wasReadonly) memo.setAttribute('readonly', '');
       }
       this.textContent = success ? '✅ コピー済' : '⚠️ コピー失敗';
