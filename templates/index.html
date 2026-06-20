@@ -49,12 +49,30 @@
     }
 
     .field label {
-      display: block;
+      display: flex;
+      align-items: center;
       font-size: 13px;
       color: #888;
       letter-spacing: 1px;
       margin-bottom: 4px;
     }
+
+    #btn-title-copy {
+      display: none;
+      margin-left: 8px;
+      background: none;
+      border: 1px solid #4ec9b0;
+      border-radius: 4px;
+      color: #4ec9b0;
+      font-size: 12px;
+      padding: 1px 6px;
+      cursor: pointer;
+      line-height: 1.4;
+      font-family: inherit;
+      transition: opacity 0.15s;
+    }
+
+    #btn-title-copy:hover { opacity: 0.75; }
 
     #line-hint {
       color: #4ec9b0;
@@ -255,6 +273,8 @@
     #btn-ok:hover { opacity: 0.85; }
 
     @media (max-width: 600px) {
+      #btn-title-copy { display: inline-flex; align-items: center; }
+
       body { padding: 12px; }
 
       .container { zoom: 1; }
@@ -285,7 +305,7 @@
     <div class="main">
       <div class="input-area">
         <div class="field">
-          <label for="title">TITLE</label>
+          <label for="title">TITLE <button id="btn-title-copy">📋</button></label>
           <input type="text" id="title" placeholder="テーマを入力してください">
         </div>
 
@@ -486,6 +506,36 @@
 
       this.textContent = success ? '✅ コピー済' : '⚠️ コピー失敗';
       setTimeout(() => { this.textContent = '📋 コピー'; }, 2000);
+    });
+
+    // --- タイトルコピーボタン（スマホ限定表示） ---
+    document.getElementById('btn-title-copy').addEventListener('click', async function () {
+      const text = document.getElementById('title').value;
+      let success = false;
+
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(text);
+          success = true;
+        } catch { /* フォールバックへ */ }
+      }
+
+      if (!success) {
+        const el = document.createElement('textarea');
+        el.value = text;
+        el.setAttribute('readonly', '');
+        el.style.cssText = 'position:fixed;top:-9999px;left:-9999px;font-size:16px;opacity:0';
+        document.body.appendChild(el);
+        el.focus();
+        el.setSelectionRange(0, text.length);
+        try {
+          success = document.execCommand('copy');
+        } catch { /* ignore */ }
+        document.body.removeChild(el);
+      }
+
+      this.textContent = success ? '✅' : '⚠️';
+      setTimeout(() => { this.textContent = '📋'; }, 2000);
     });
 
     // --- クリアボタン ---
